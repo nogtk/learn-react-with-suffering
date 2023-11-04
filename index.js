@@ -18,6 +18,10 @@ class TodoListModel {
     return this.todos.get(id);
   }
 
+  getTodos() {
+    return Array.from(this.todos.values());
+  }
+
   removeTodo(id) {
     return this.todos.delete(id);
   }
@@ -30,43 +34,36 @@ class TodoListModel {
 }
 
 class View {
-  addTodo(todo) {
+  render(todos) {
     const todosElement = document.getElementById('todos');
-    const todoElement = this._createTodoElement(todo);
-    todosElement.appendChild(todoElement);
-  }
+    todosElement.innerHTML = '';
+    const fragment = document.createDocumentFragment();
 
-  check(id) {
-    const todoElement = document.getElementById(`todo-${id}`);
-    todoElement.className = 'checked';
-  }
-
-  unCheck(id) {
-    const todoElement = document.getElementById(`todo-${id}`);
-    todoElement.className = '';
-  }
-
-  removeTodo(id) {
-    const todoElement = document.getElementById(`todo-${id}`);
-    todoElement.remove();
-  }
-
-  resetTodo() {
-    const input = document.getElementById('task-input');
-    input.value = '';
+    todos.forEach((todo) => {
+      const todoElement = this._createTodoElement(todo);
+      fragment.appendChild(todoElement);
+    });
+    todosElement.appendChild(fragment);
   }
 
   _createTodoElement(todo) {
-    const {id, task} = todo;
+    const {id, task, checked} = todo;
     const todoElement = document.createElement('li');
     todoElement.id = `todo-${id}`;
     const checkBoxElement = document.createElement('input');
+    checkBoxElement.type = 'checkbox';
+    checkBoxElement.id = `checkbox-${id}`;
+    checkBoxElement.checked = checked;
     todoElement.appendChild(checkBoxElement);
     const labelElement = document.createElement('label');
     labelElement.innerText = task;
-    checkBoxElement.type = 'checkbox';
-    checkBoxElement.id = `checkbox-${id}`;
     todoElement.appendChild(labelElement);
+
+    if (checked) {
+      todoElement.className = 'checked';
+    } else {
+      todoElement.className = '';
+    }
 
     const buttonElement = document.createElement('button');
     buttonElement.innerText = 'Delete';
@@ -85,6 +82,17 @@ class Controller {
     this.handleSubmitForm();
   }
 
+  flash() {
+    const todos = todoList.getTodos();
+    view.render(todos);
+
+    todos.forEach((todo) => {
+      const id = todo.id;
+      this.handleCheckTask(id);
+      this.handleClickDeleteTask(id);
+    });
+  }
+
   handleSubmitForm() {
     const formElement = document.getElementById('task-send-form');
   formElement.addEventListener('submit', (e) => {
@@ -96,35 +104,26 @@ class Controller {
         return;
       }
 
-      const addedTodoId = todoList.addTodo(task);
-      const todo = todoList.getTodo(addedTodoId);
-
-      view.addTodo(todo);
-      this.handleCheckTask(todo.id);
-      this.handleClickDeleteTask(todo.id);
-      view.resetTodo();
+      todoList.addTodo(task);
+      this.flash();
     });
   }
 
   handleCheckTask(id) {
     const checkBoxElement = document.getElementById(`checkbox-${id}`);
-    checkBoxElement.onchange = function (e) {
+    checkBoxElement.addEventListener('change', (e) => {
       const checked = e.target.checked;
-      const stateChangedTodo = todoList.checkTodo(id, checked);
-      if (stateChangedTodo.checked) {
-        view.check(stateChangedTodo.id);
-      } else {
-        view.unCheck(stateChangedTodo.id);
-      }
-    };
+      todoList.checkTodo(id, checked);
+      this.flash();
+    });
   }
 
   handleClickDeleteTask(id) {
     const buttonElement = document.getElementById(`button-${id}`);
-    buttonElement.onclick = function () {
-      view.removeTodo(id);
+    buttonElement.addEventListener("click", () => {
       todoList.removeTodo(id);
-    };
+      this.flash();
+    });
   }
 }
 
